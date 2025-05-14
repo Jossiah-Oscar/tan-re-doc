@@ -51,28 +51,6 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-
-//    @Bean
-//    SecurityFilterChain filterChain(HttpSecurity http,
-//                                    ActiveDirectoryLdapAuthenticationProvider adProvider,
-//                                    JwtUtil jwtUtil) throws Exception {
-//        http
-//                .cors().and()
-//                .csrf(csrf -> csrf.disable())
-//                .authenticationProvider(adProvider)
-//                .authorizeHttpRequests(auth -> auth
-//                        // allow the CORS preflight for login
-//                        .requestMatchers(HttpMethod.OPTIONS, "/auth/login").permitAll()
-//                            // then allow the actual login POST
-//                        .requestMatchers(HttpMethod.POST,    "/auth/login").permitAll()                        .anyRequest().authenticated()
-//                )
-//                .oauth2ResourceServer(oauth2 -> oauth2
-//                        .jwt(jwt -> jwt.jwtAuthenticationConverter(new JwtAuthenticationConverter()))
-//                )
-//                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//        return http.build();
-//    }
-
     //NEW
 
     @Bean
@@ -105,7 +83,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));   // your front-end origin
+        config.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "http://192.168.1.45:8085"
+        ));   // your front-end origin
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);  // if you need cookies/auth headers
