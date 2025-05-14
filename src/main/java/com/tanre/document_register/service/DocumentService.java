@@ -100,4 +100,14 @@ public class DocumentService {
                 f.getDateUploaded()))
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public void deleteDocument(Long id) {
+        if (!docRepo.existsById(id)) {
+            throw new EntityNotFoundException("Document not found");
+        }
+        docRepo.deleteById(id);
+        // with cascade = ALL + orphanRemoval = true on files & evidence,
+        // child rows will be cleaned up automatically.
+    }
 }

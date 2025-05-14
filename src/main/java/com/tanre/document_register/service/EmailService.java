@@ -6,6 +6,8 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+
 @Service
 public class EmailService {
     private final JavaMailSender mailSender;
@@ -23,7 +25,13 @@ public class EmailService {
     public void sendDocumentSubmissionEmail(Document doc) {
         SimpleMailMessage msg = new SimpleMailMessage();
         msg.setFrom(from);
-        msg.setTo(to);
+
+        //splitting the rece
+        String[] recipients = Arrays.stream(to.split(","))
+                .map(String::trim)
+                .toArray(String[]::new);
+
+        msg.setTo(recipients);
         msg.setSubject("New Document Submitted: ID " + doc.getId());
         msg.setText(buildBody(doc));
         mailSender.send(msg);
@@ -41,7 +49,7 @@ public class EmailService {
                 .append("Status: ").append(doc.getStatus()).append("\n")
                 .append("Submitted At: ").append(doc.getDateCreated()).append("\n\n")
                 .append("You can review it here: ")
-//                .append("http://your-app/documents/").append(doc.getId())
+                .append("http://192.168.1.45:8085/debit-upload/").append(doc.getId())
                 .toString();
     }
 }

@@ -9,6 +9,7 @@ import com.tanre.document_register.model.Evidence;
 import com.tanre.document_register.repository.DocumentFileRepository;
 import com.tanre.document_register.service.DocumentService;
 import com.tanre.document_register.service.EvidenceService;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -109,4 +110,16 @@ public class DocumentController {
         List<DocumentFileDTO> files = docService.getDocumentsByDocId(id);
         return ResponseEntity.ok(files);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDocument(@PathVariable Long id) {
+        try {
+            docService.deleteDocument(id);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+
 }
