@@ -10,6 +10,8 @@ import com.tanre.document_register.repository.DocumentFileRepository;
 import com.tanre.document_register.repository.DocumentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,11 +38,16 @@ public class DocumentService {
                                    String documentType,
                                    String fileName,
                                    List<MultipartFile> files) throws IOException {
+        String username = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
         Document doc = new Document();
         doc.setCedantName(cedantName);
         doc.setDocumentType(documentType);
         doc.setFileName(fileName);
         doc.setStatus(Status.PENDING);
+        doc.setCreatedBy(username);
         Document saved = docRepo.save(doc);
 
         for (MultipartFile file : files) {
@@ -53,7 +60,7 @@ public class DocumentService {
         }
 
         // *** SEND EMAIL ***
-        emailService.sendDocumentSubmissionEmail(saved);
+//        emailService.sendDocumentSubmissionEmail(saved);
         return saved;
     }
 
@@ -103,10 +110,23 @@ public class DocumentService {
 
     @Transactional
     public void deleteDocument(Long id) {
+
+
         if (!docRepo.existsById(id)) {
             throw new EntityNotFoundException("Document not found");
         }
-        docRepo.deleteById(id);
+
+        String username = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+
+        Document doc = docRepo
+                .findByIdAndCreatedBy(id, username)
+                .orElseThrow(() ->
+                        new AccessDeniedException("Cannot delete a document you did not create"));
+
+        docRepo.delete(doc);
         // with cascade = ALL + orphanRemoval = true on files & evidence,
         // child rows will be cleaned up automatically.
     }

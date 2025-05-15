@@ -32,6 +32,9 @@ public class Document {
     @UpdateTimestamp
     private LocalDateTime dateUpdated;
 
+    @Column(nullable = false, updatable = false)
+    private String createdBy;
+
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DocumentFile> files = new ArrayList<>();
 

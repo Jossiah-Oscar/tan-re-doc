@@ -73,6 +73,7 @@ public class DocumentController {
         dto.setDocumentType(doc.getDocumentType());
         dto.setFileName(doc.getFileName());
         dto.setStatus(doc.getStatus());
+        dto.setCreatedBy(doc.getCreatedBy());
         dto.setDateCreated(doc.getDateCreated());
         dto.setDateUpdated(doc.getDateUpdated());
         return dto;

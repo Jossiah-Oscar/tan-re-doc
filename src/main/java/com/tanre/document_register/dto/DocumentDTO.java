@@ -14,6 +14,7 @@ public class DocumentDTO {
     private String cedantName;
     private String documentType;
     private String fileName;
+    private String createdBy;
     private Status status;
     private LocalDateTime dateCreated;
     private LocalDateTime dateUpdated;
