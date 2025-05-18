@@ -5,12 +5,15 @@ import com.tanre.document_register.dto.DocumentDetailsDTO;
 import com.tanre.document_register.dto.DocumentFileDTO;
 import com.tanre.document_register.model.Document;
 import com.tanre.document_register.model.DocumentFile;
+import com.tanre.document_register.model.DocumentTransaction;
 import com.tanre.document_register.model.Status;
 import com.tanre.document_register.repository.DocumentFileRepository;
 import com.tanre.document_register.repository.DocumentRepository;
+import com.tanre.document_register.repository.DocumentTransactionRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,14 +26,16 @@ import java.util.stream.Collectors;
 public class DocumentService {
     private final DocumentRepository docRepo;
     private final DocumentFileRepository fileRepo;
+    private final DocumentTransactionRepository documentTransactionRepository;
     private final EmailService emailService;
 
     public DocumentService(DocumentRepository docRepo,
                            DocumentFileRepository fileRepo,
-                           EmailService emailService) {
+                           EmailService emailService,  DocumentTransactionRepository documentTransactionRepository) {
         this.docRepo = docRepo;
         this.fileRepo = fileRepo;
         this.emailService = emailService;
+        this.documentTransactionRepository = documentTransactionRepository;
     }
 
     @Transactional
@@ -90,6 +95,7 @@ public class DocumentService {
         dto.setDocumentType(doc.getDocumentType());
         dto.setFileName(doc.getFileName());
         dto.setStatus(doc.getStatus());
+        dto.setCreatedBy(doc.getCreatedBy());
         dto.setDateCreated(doc.getDateCreated());
         dto.setDateUpdated(doc.getDateUpdated());
         dto.setFiles(fileDTOs);
@@ -129,5 +135,46 @@ public class DocumentService {
         docRepo.delete(doc);
         // with cascade = ALL + orphanRemoval = true on files & evidence,
         // child rows will be cleaned up automatically.
+    }
+
+
+    /** Finance only */
+    @PreAuthorize("hasRole('FINANCE')")
+    @Transactional
+    public void reverseDocument(Long docId, String comment) {
+        Document doc = docRepo.findById(docId)
+                .orElseThrow(() -> new EntityNotFoundException("Doc not found"));
+        Status old = doc.getStatus();
+        doc.setStatus(Status.RETURNED);
+        docRepo.save(doc);
+
+        String user = SecurityContextHolder.getContext().getAuthentication().getName();
+        DocumentTransaction documentTransaction = new DocumentTransaction();
+        documentTransaction.setDocument(doc);
+        documentTransaction.setOldStatus(old);
+        documentTransaction.setNewStatus(Status.RETURNED);
+        documentTransaction.setComment(comment);
+        documentTransaction.setChangedBy(user);
+        documentTransactionRepository.save(documentTransaction);
+    }
+
+    /** Uploader only, and only when PENDING */
+    @PreAuthorize("hasRole('OPERATION')")
+    @Transactional
+    public Document updateDocument(Long docId,
+                                   String cedantName,
+                                   String documentType,
+                                   String fileName) {
+        String user = SecurityContextHolder.getContext().getAuthentication().getName();
+        Document doc = docRepo.findByIdAndCreatedBy(docId, user)
+                .orElseThrow(() ->
+                        new AccessDeniedException("Can only edit your own pending docs"));
+        if (doc.getStatus() != Status.PENDING) {
+            throw new IllegalStateException("Can only edit when Pending");
+        }
+        doc.setCedantName(cedantName);
+        doc.setDocumentType(documentType);
+        doc.setFileName(fileName);
+        return docRepo.save(doc);
     }
 }

@@ -23,7 +23,9 @@ public class Document {
     private String documentType;
     private String fileName;
 
+
     @Enumerated(EnumType.STRING)
+    @Column(name = "status", columnDefinition = "document_status")
     private Status status;
 
     @CreationTimestamp

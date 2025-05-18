@@ -18,7 +18,7 @@ public class DocumentDetailsDTO {
     private Status status;
     private LocalDateTime dateCreated;
     private LocalDateTime dateUpdated;
-
+    private String createdBy;
     private List<DocumentFileDTO> files;
 
     // getters & setters omitted for brevity

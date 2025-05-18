@@ -5,8 +5,10 @@ import com.tanre.document_register.dto.DocumentDetailsDTO;
 import com.tanre.document_register.dto.DocumentFileDTO;
 import com.tanre.document_register.model.Document;
 import com.tanre.document_register.model.DocumentFile;
+import com.tanre.document_register.model.DocumentTransaction;
 import com.tanre.document_register.model.Evidence;
 import com.tanre.document_register.repository.DocumentFileRepository;
+import com.tanre.document_register.repository.DocumentTransactionRepository;
 import com.tanre.document_register.service.DocumentService;
 import com.tanre.document_register.service.EvidenceService;
 import jakarta.persistence.EntityNotFoundException;
@@ -20,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,13 +32,16 @@ public class DocumentController {
     private final DocumentService docService;
     private final EvidenceService evidenceService;
     private final DocumentFileRepository fileRepo;
+    private final DocumentTransactionRepository documentTransactionRepository;
+
 
     public DocumentController(DocumentService docService,
                               EvidenceService evidenceService,
-                              DocumentFileRepository fileRepo) {
+                              DocumentFileRepository fileRepo,DocumentTransactionRepository documentTransactionRepository ) {
         this.docService = docService;
         this.evidenceService = evidenceService;
         this.fileRepo = fileRepo;
+        this.documentTransactionRepository = documentTransactionRepository;
     }
 
     @PostMapping("/upload")
@@ -122,5 +128,32 @@ public class DocumentController {
         }
     }
 
+    @PostMapping("/{id}/reverse")
+    public ResponseEntity<Void> reverse(
+            @PathVariable Long id,
+            @RequestBody Map<String,String> body) {
+        docService.reverseDocument(id, body.get("comment"));
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Document> update(
+            @PathVariable Long id,
+            @RequestBody Map<String,String> body) {
+        Document updated = docService.updateDocument(
+                id,
+                body.get("cedantName"),
+                body.get("documentType"),
+                body.get("fileName")
+        );
+        return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/{id}/transactions")
+    public ResponseEntity<List<DocumentTransaction>> transactions(@PathVariable Long id) {
+        return ResponseEntity.ok(
+                documentTransactionRepository.findByDocumentIdOrderByChangedAtDesc(id)
+        );
+    }
 
 }
