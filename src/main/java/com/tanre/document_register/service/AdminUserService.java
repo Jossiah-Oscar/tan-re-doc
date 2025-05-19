@@ -21,14 +21,11 @@ public class AdminUserService {
         this.roleRepo = roleRepo;
     }
 
-    /** Create a new role if it doesn’t exist yet */
     @Transactional
-    public RoleEntity createRole(String roleName) {
-        return roleRepo.findByName(roleName)
-                .orElseGet(() -> roleRepo.save(new RoleEntity(null, roleName, Set.of())));
+    public List<UserEntity> findAllUsers() {
+        return userRepo.findAll();
     }
 
-    /** Create a new user and assign them the given roles */
     @Transactional
     public UserEntity createUser(String username, List<String> roleNames) {
         if (userRepo.findByUsername(username).isPresent()) {
@@ -36,22 +33,56 @@ public class AdminUserService {
         }
         UserEntity user = new UserEntity();
         user.setUsername(username);
-        // fetch or create each role, then add to user
         Set<RoleEntity> roles = roleNames.stream()
-                .map(this::createRole)
+                .map(this::findOrCreateRole)
                 .collect(Collectors.toSet());
         user.setRoles(roles);
         return userRepo.save(user);
     }
 
-    /** Add a role to an existing user */
     @Transactional
-    public UserEntity addRoleToUser(String username, String roleName) {
+    public UserEntity replaceUserRoles(String username, List<String> roleNames) {
         UserEntity user = userRepo.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown user"));
-        RoleEntity role = createRole(roleName);
-        user.getRoles().add(role);
+                .orElseThrow(() -> new IllegalArgumentException("Unknown user: " + username));
+        Set<RoleEntity> roles = roleNames.stream()
+                .map(this::findOrCreateRole)
+                .collect(Collectors.toSet());
+        user.setRoles(roles);
         return userRepo.save(user);
+    }
+
+    @Transactional
+    public void deleteUser(String username) {
+        UserEntity user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown user: " + username));
+        userRepo.delete(user);
+    }
+
+    @Transactional
+    public List<RoleEntity> findAllRoles() {
+        return roleRepo.findAll();
+    }
+
+    @Transactional
+    public RoleEntity createRole(String roleName) {
+        return findOrCreateRole(roleName);
+    }
+
+    /** Delete a role (for DELETE /admin/roles/{name}) */
+    @Transactional
+    public void deleteRole(String roleName) {
+        RoleEntity role = roleRepo.findByName(roleName)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown role: " + roleName));
+        roleRepo.delete(role);
+    }
+
+    private RoleEntity findOrCreateRole(String roleName) {
+        return roleRepo.findByName(roleName)
+                .orElseGet(() -> {
+                    RoleEntity r = new RoleEntity();
+                    r.setName(roleName);
+                    return roleRepo.save(r);
+                });
     }
 
     @Transactional

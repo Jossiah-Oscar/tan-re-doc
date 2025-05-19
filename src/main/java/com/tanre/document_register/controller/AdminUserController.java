@@ -1,6 +1,11 @@
 package com.tanre.document_register.controller;
 
 
+import com.tanre.document_register.dto.RoleRequest;
+import com.tanre.document_register.dto.RolesRequest;
+import com.tanre.document_register.dto.UserCreateRequest;
+import com.tanre.document_register.dto.UserDTO;
+import com.tanre.document_register.model.RoleEntity;
 import com.tanre.document_register.model.UserEntity;
 import com.tanre.document_register.service.AdminUserService;
 import org.springframework.http.ResponseEntity;
@@ -18,24 +23,61 @@ public class AdminUserController {
         this.admin = admin;
     }
 
-    @PostMapping("/roles")
-    public ResponseEntity<?> createRole(@RequestBody Map<String,String> body) {
-        String name = body.get("name");
-        return ResponseEntity.ok(admin.createRole(name));
+    @GetMapping("/users")
+    public List<UserDTO> listUsers() {
+        return admin.findAllUsers().stream()
+                .map(u -> new UserDTO(
+                        u.getUsername(),
+                        u.getRoles().stream().map(RoleEntity::getName).toList()
+                ))
+                .toList();
     }
 
     @PostMapping("/users")
-    public ResponseEntity<?> createUser(@RequestBody Map<String,Object> body) {
-        String username = (String) body.get("username");
-        List<String> roles = (List<String>) body.get("roles");
-        UserEntity user = admin.createUser(username, roles);
-        return ResponseEntity.status(201).body(user);
+    public ResponseEntity<UserDTO> createUser(@RequestBody UserCreateRequest req) {
+        UserEntity created = admin.createUser(req.username(), req.roles());
+        return ResponseEntity.status(201).body(new UserDTO(
+                created.getUsername(),
+                created.getRoles().stream().map(RoleEntity::getName).toList()
+        ));
     }
 
-    @PostMapping("/users/{username}/roles")
-    public ResponseEntity<?> addRole(@PathVariable String username,
-                                     @RequestBody Map<String,String> body) {
-        String role = body.get("role");
-        return ResponseEntity.ok(admin.addRoleToUser(username, role));
+    @PutMapping("/users/{username}/roles")
+    public UserDTO replaceRoles(
+            @PathVariable String username,
+            @RequestBody RolesRequest req
+    ) {
+        UserEntity updated = admin.replaceUserRoles(username, req.roles());
+        return new UserDTO(
+                updated.getUsername(),
+                updated.getRoles().stream().map(RoleEntity::getName).toList()
+        );
+    }
+
+    @DeleteMapping("/users/{username}")
+    public ResponseEntity<Void> deleteUser(@PathVariable String username) {
+        admin.deleteUser(username);
+        return ResponseEntity.noContent().build();
+    }
+
+    // === Roles endpoints ===
+    @GetMapping("/roles")
+    public List<String> listRoles() {
+        return admin.findAllRoles()
+                .stream()
+                .map(RoleEntity::getName)
+                .toList();
+    }
+
+    @PostMapping("/roles")
+    public ResponseEntity<String> createRole(@RequestBody RoleRequest req) {
+        RoleEntity r = admin.createRole(req.name());
+        return ResponseEntity.status(201).body(r.getName());
+    }
+
+    @DeleteMapping("/roles/{name}")
+    public ResponseEntity<Void> deleteRole(@PathVariable String name) {
+        admin.deleteRole(name);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -29,7 +29,7 @@ public class DocumentTransaction {
     private Status oldStatus;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "new_status", columnDefinition = "document_status", nullable = false)
+    @Column(name = "new_status", nullable = false)
     private Status newStatus;
 
     @Column(nullable = false)

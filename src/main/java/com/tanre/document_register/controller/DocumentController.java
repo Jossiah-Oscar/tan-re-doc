@@ -3,6 +3,7 @@ package com.tanre.document_register.controller;
 import com.tanre.document_register.dto.DocumentDTO;
 import com.tanre.document_register.dto.DocumentDetailsDTO;
 import com.tanre.document_register.dto.DocumentFileDTO;
+import com.tanre.document_register.dto.EvidenceDTO;
 import com.tanre.document_register.model.Document;
 import com.tanre.document_register.model.DocumentFile;
 import com.tanre.document_register.model.DocumentTransaction;
@@ -13,6 +14,7 @@ import com.tanre.document_register.service.DocumentService;
 import com.tanre.document_register.service.EvidenceService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -112,6 +114,8 @@ public class DocumentController {
     }
 
 
+
+
     @GetMapping("/{id}/files")
     public ResponseEntity<List<DocumentFileDTO>> listFiles(@PathVariable Long id) {
         List<DocumentFileDTO> files = docService.getDocumentsByDocId(id);
@@ -154,6 +158,25 @@ public class DocumentController {
         return ResponseEntity.ok(
                 documentTransactionRepository.findByDocumentIdOrderByChangedAtDesc(id)
         );
+    }
+
+    @GetMapping("/{docId}/evidence/{evidenceId}/download")
+    public ResponseEntity<Resource> downloadEvidence(
+            @PathVariable Long evidenceId
+    ) throws IOException {
+        Resource resource = evidenceService.loadEvidence(evidenceId);
+        String filename = "evidence-" + evidenceId;
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + filename + "\"")
+                .body(resource);
+    }
+
+    @GetMapping("/{id}/evidence")
+    public ResponseEntity<List<EvidenceDTO>> listEvidence(@PathVariable("id") Long documentId) {
+        List<EvidenceDTO> dto = evidenceService.listEvidence(documentId);
+        return ResponseEntity.ok(dto);
     }
 
 }
