@@ -11,4 +11,5 @@ import java.util.List;
 public interface DocumentTransactionRepository
         extends JpaRepository<DocumentTransaction,Long> {
     List<DocumentTransaction> findByDocumentIdOrderByChangedAtDesc(Long documentId);
+
 }

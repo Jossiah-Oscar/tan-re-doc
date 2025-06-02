@@ -1,9 +1,6 @@
 package com.tanre.document_register.controller;
 
-import com.tanre.document_register.dto.DocumentDTO;
-import com.tanre.document_register.dto.DocumentDetailsDTO;
-import com.tanre.document_register.dto.DocumentFileDTO;
-import com.tanre.document_register.dto.EvidenceDTO;
+import com.tanre.document_register.dto.*;
 import com.tanre.document_register.model.Document;
 import com.tanre.document_register.model.DocumentFile;
 import com.tanre.document_register.model.DocumentTransaction;
@@ -16,6 +13,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -153,12 +151,12 @@ public class DocumentController {
         return ResponseEntity.ok(updated);
     }
 
-    @GetMapping("/{id}/transactions")
-    public ResponseEntity<List<DocumentTransaction>> transactions(@PathVariable Long id) {
-        return ResponseEntity.ok(
-                documentTransactionRepository.findByDocumentIdOrderByChangedAtDesc(id)
-        );
-    }
+//    @GetMapping("/{id}/transactions")
+//    public ResponseEntity<List<DocumentTransaction>> transactions(@PathVariable Long id) {
+//        return ResponseEntity.ok(
+//                documentTransactionRepository.findByDocumentIdOrderByChangedAtDesc(id)
+//        );
+//    }
 
     @GetMapping("/{docId}/evidence/{evidenceId}/download")
     public ResponseEntity<Resource> downloadEvidence(
@@ -177,6 +175,20 @@ public class DocumentController {
     public ResponseEntity<List<EvidenceDTO>> listEvidence(@PathVariable("id") Long documentId) {
         List<EvidenceDTO> dto = evidenceService.listEvidence(documentId);
         return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/{id}/files")
+    public ResponseEntity<Void> uploadFiles(
+            @PathVariable Long id,
+            @RequestParam("files") List<MultipartFile> files) throws IOException {
+        docService.addFilesToDocument(id, files);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/{id}/transactions")
+    public List<DocumentTransactionDTO> getTransactions(
+            @PathVariable("id") Long documentId) {
+        return docService.getTransactionsForDocument(documentId);
     }
 
 }

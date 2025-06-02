@@ -3,6 +3,7 @@ package com.tanre.document_register.service;
 
 import com.tanre.document_register.dto.DocumentDetailsDTO;
 import com.tanre.document_register.dto.DocumentFileDTO;
+import com.tanre.document_register.dto.DocumentTransactionDTO;
 import com.tanre.document_register.model.Document;
 import com.tanre.document_register.model.DocumentFile;
 import com.tanre.document_register.model.DocumentTransaction;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -176,5 +178,47 @@ public class DocumentService {
         doc.setDocumentType(documentType);
         doc.setFileName(fileName);
         return docRepo.save(doc);
+    }
+
+    @Transactional
+    public void addFilesToDocument(Long docId, List<MultipartFile> files) throws IOException {
+        Document doc = docRepo.findById(docId)
+                .orElseThrow(() -> new EntityNotFoundException("Document not found"));
+
+        String user = SecurityContextHolder.getContext().getAuthentication().getName();
+        Instant now = Instant.now();
+
+        for (MultipartFile mf : files) {
+            DocumentFile df = new DocumentFile();
+            df.setDocument(doc);
+            df.setFileName(mf.getOriginalFilename());
+            df.setContentType(mf.getContentType());
+            df.setData(mf.getBytes());
+            fileRepo.save(df);
+        }
+
+        // record a transaction
+        DocumentTransaction tx = new DocumentTransaction();
+        tx.setDocument(doc);
+        tx.setOldStatus(doc.getStatus());        // or null if not status-related
+        tx.setNewStatus(doc.getStatus());
+        tx.setComment("Uploaded " + files.size() + " new file(s)");
+        tx.setChangedBy(user);
+        tx.setChangedAt(now);
+        documentTransactionRepository.save(tx);
+    }
+
+    @Transactional()
+    public List<DocumentTransactionDTO> getTransactionsForDocument(Long docId) {
+        return documentTransactionRepository.findByDocumentIdOrderByChangedAtDesc(docId).stream()
+                .map(tx -> new DocumentTransactionDTO(
+                        tx.getId(),
+                        tx.getOldStatus().name(),
+                        tx.getNewStatus().name(),
+                        tx.getComment(),
+                        tx.getChangedBy(),
+                        tx.getChangedAt()
+                ))
+                .toList();
     }
 }
