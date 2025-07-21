@@ -7,9 +7,11 @@ import com.tanre.document_register.model.ItemRequestLine;
 import com.tanre.document_register.repository.ItemRepository;
 import com.tanre.document_register.repository.ItemRequestRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
@@ -63,7 +65,15 @@ public class ItemService {
             Item item = repo.findById(dto.itemId())
                     .orElseThrow(() -> new EntityNotFoundException("Item not found"));
 
-            // You can optionally reduce the stock here or leave that's a separate concern
+            if (item.getQuantity() < dto.quantity()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        String.format("Insufficient stock for %s: requested=%d, available=%d",
+                                item.getName(), dto.quantity(), item.getQuantity())
+                );
+            }
+            // reduce on-hand quantity
+            item.setQuantity(item.getQuantity() - dto.quantity());
 
             ItemRequestLine line = new ItemRequestLine();
             line.setRequest(req);
