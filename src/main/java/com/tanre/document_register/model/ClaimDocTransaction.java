@@ -9,6 +9,7 @@ import java.time.Instant;
 @Entity
 @Getter
 @Setter
+@Table(name = "claim_doc_transaction")
 public class ClaimDocTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

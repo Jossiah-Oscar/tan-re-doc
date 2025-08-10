@@ -1,0 +1,51 @@
+databaseChangeLog:
+    - changeSet:
+          id: 20250803-003
+          author: jkibona
+          changes:
+
+              # 1. Surplus trigger function
+              - sql:
+                    splitStatements: false
+                    stripComments: true
+                    sql: |
+                        CREATE OR REPLACE FUNCTION calc_surplus_capacity()
+                        RETURNS trigger AS $$
+                        BEGIN
+                          NEW.treaty_limit   := NEW.retention * NEW.lines;
+                          NEW.total_capacity := NEW.retention + NEW.treaty_limit;
+                          RETURN NEW;
+                        END;
+                        $$ LANGUAGE plpgsql;
+
+              # 2. Surplus trigger
+              - sql:
+                    sql: |
+                        CREATE TRIGGER trg_calc_surplus
+                        BEFORE INSERT OR UPDATE
+                        ON surplus_retro_program
+                        FOR EACH ROW
+                        EXECUTE PROCEDURE calc_surplus_capacity();
+
+              # 3. Policy cessions trigger function
+              - sql:
+                    splitStatements: false
+                    stripComments: true
+                    sql: |
+                        CREATE OR REPLACE FUNCTION calc_policy_capacity()
+                        RETURNS trigger AS $$
+                        BEGIN
+                          NEW.treaty_limit   := NEW.retention * NEW.lines;
+                          NEW.total_capacity := NEW.retention + NEW.treaty_limit;
+                          RETURN NEW;
+                        END;
+                        $$ LANGUAGE plpgsql;
+
+              # 4. Policy cessions trigger
+              - sql:
+                    sql: |
+                        CREATE TRIGGER trg_calc_policy
+                        BEFORE INSERT OR UPDATE
+                        ON policy_cessions_program
+                        FOR EACH ROW
+                        EXECUTE PROCEDURE calc_policy_capacity();

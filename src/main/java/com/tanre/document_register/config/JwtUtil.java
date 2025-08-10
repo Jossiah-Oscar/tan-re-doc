@@ -14,7 +14,7 @@ import java.util.List;
 @Component
 public class JwtUtil {
     private final SecretKey key = Keys.hmacShaKeyFor("ReplaceWithASecureRandom32+CharSecret".getBytes());
-    private final long expirationMs = 3600_000;
+    private final long expirationMs = 86_400_000L;
 
     public String generateToken(String username, List<String> roles) {
         return Jwts.builder()

@@ -1,23 +1,27 @@
 package com.tanre.document_register.service;
 
+import com.tanre.document_register.controller.ClaimDocumentController;
 import com.tanre.document_register.dto.ClaimDocFileDTO;
 import com.tanre.document_register.dto.ClaimDocumentDTO;
+import com.tanre.document_register.dto.ClaimDocumentUpdateRequest;
 import com.tanre.document_register.dto.ClaimFinanceDocStatus;
+import com.tanre.document_register.config.RestTemplateConfig;
 import com.tanre.document_register.model.*;
 import com.tanre.document_register.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -29,12 +33,24 @@ public class ClaimDocumentService {
     final private ClaimDocTransactionRepo claimDocTransactionRepo;
     final private ClaimDocFinanceStatusRepo claimDocFinanceStatusRepo;
 
-    public ClaimDocumentService(ClaimDocFinanceStatusRepo claimDocFinanceStatusRepo,ClaimDocumentRepository claimDocumentRepository,ClaimDocumentFileRepository claimDocumentFileRepository, ClaimDocumentStatusRepository claimDocumentStatusRepository, ClaimDocTransactionRepo claimDocTransactionRepo) {
+
+
+    private static final Logger logger = LoggerFactory.getLogger(ClaimDocumentService.class);
+
+
+    @Value("${oracle.service.url}")
+    private String oracleServiceUrl;
+
+    private RestTemplate restTemplate;
+
+    public ClaimDocumentService(RestTemplate restTemplate
+            ,ClaimDocFinanceStatusRepo claimDocFinanceStatusRepo,ClaimDocumentRepository claimDocumentRepository,ClaimDocumentFileRepository claimDocumentFileRepository, ClaimDocumentStatusRepository claimDocumentStatusRepository, ClaimDocTransactionRepo claimDocTransactionRepo) {
         this.claimDocumentRepository = claimDocumentRepository;
         this.claimDocumentFileRepository = claimDocumentFileRepository;
         this.claimDocumentStatusRepository = claimDocumentStatusRepository;
         this.claimDocTransactionRepo = claimDocTransactionRepo;
         this.claimDocFinanceStatusRepo = claimDocFinanceStatusRepo;
+        this.restTemplate = restTemplate;
     }
 
 
@@ -166,6 +182,8 @@ public class ClaimDocumentService {
         claimDocTransactionRepo.save(claimDocTransaction);
     }
 
+
+    @Transactional
     public void changeFinanceStatus(Long docId, String comment, Long statusID, Long mainStatusID) {
 
         //Get document to be changed
@@ -206,7 +224,6 @@ public class ClaimDocumentService {
         claimDocTransaction.setChangedBy(user);
         claimDocTransactionRepo.save(claimDocTransaction);
 
-
     }
 
     public void uploadClaimDocument(
@@ -238,6 +255,75 @@ public class ClaimDocumentService {
                         file.getDateUploaded()
                 ))
                 .collect(Collectors.toList());
+    }
+
+
+    @Transactional
+    public void updateDocumentStatusesBatch(List<ClaimDocumentUpdateRequest> documents) {
+        // Prepare batch request
+        List<ClaimDocumentUpdateRequest> checkRequests = documents.stream()
+                .map(doc -> new ClaimDocumentUpdateRequest(
+                        doc.getContractNumber(),
+                        doc.getClaimNumber(),
+                        doc.getUnderwritingYear(),
+                        doc.getDocumentId()))
+                .collect(Collectors.toList());
+        try {
+            // Single API call for all documents
+            String url = oracleServiceUrl + "/api/claims/check-batch";
+
+            // Log outgoing request for debugging
+            logger.info("Sending batch request to Oracle Service API: {}", url);
+            logger.debug("Request payload: {}", checkRequests);
+
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    url, checkRequests, Map.class);
+
+            Map<String, Boolean> outstandingResults = response.getBody();
+
+            // Validate the API response
+            if (outstandingResults == null) {
+                logger.error("Oracle Service API returned null response body.");
+                throw new RuntimeException("Oracle Service API returned null response");
+            }
+
+            // Log additional details for debugging
+            logger.debug("API Response from Oracle Service: {}", outstandingResults);
+
+
+            // Process results and update documents
+            List<Long> documentsToComplete = new ArrayList<>();
+            for (ClaimDocumentUpdateRequest doc : documents) {
+                String key = doc.getContractNumber() + "_" +
+                        doc.getClaimNumber() + "_" +
+                        doc.getUnderwritingYear();
+
+                // Log key processing for troubleshooting
+                logger.debug("Processing document ID: {} with lookup key: {}", doc.getDocumentId(), key);
+
+
+                Boolean hasOutstanding = outstandingResults.get(key);
+
+                if (hasOutstanding != null && !hasOutstanding) {
+                    documentsToComplete.add(doc.getDocumentId());
+                }
+            }
+
+            // Log documents ready for status update
+            logger.info("Documents to be marked as completed: {}", documentsToComplete);
+
+            if (!documentsToComplete.isEmpty()) {
+                // Fetch the ClaimDocumentStatus entity for status ID 5L
+                ClaimDocumentStatus newStatus = claimDocumentStatusRepository.findById(5L)
+                        .orElseThrow(() -> new RuntimeException("Status with ID 5 not found"));
+
+
+                claimDocumentRepository.updateStatusBatch(documentsToComplete, newStatus);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update document statuses", e);
+        }
     }
 
 

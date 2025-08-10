@@ -3,3 +3,11 @@ databaseChangeLog:
       file: db/changelog/changes/initial-schema.yaml
   - include:
       file: db/changelog/changes/claim-file.yaml
+  - include:
+      file: db/changelog/changes/1-offer-analysis-initial.yaml
+  - include:
+      file: db/changelog/changes/002-static-data.yaml
+  - include:
+      file: db/changelog/changes/003-triggers.yaml
+  - include:
+      file: db/changelog/changes/004-facultative-offer-analysis.yaml

@@ -1,13 +1,12 @@
 package com.tanre.document_register.service;
 
 
+import com.tanre.document_register.dto.DocumentDTO;
 import com.tanre.document_register.dto.DocumentDetailsDTO;
 import com.tanre.document_register.dto.DocumentFileDTO;
 import com.tanre.document_register.dto.DocumentTransactionDTO;
-import com.tanre.document_register.model.Document;
-import com.tanre.document_register.model.DocumentFile;
-import com.tanre.document_register.model.DocumentTransaction;
-import com.tanre.document_register.model.Status;
+import com.tanre.document_register.model.*;
+import com.tanre.document_register.repository.BrokerCedantRepository;
 import com.tanre.document_register.repository.DocumentFileRepository;
 import com.tanre.document_register.repository.DocumentRepository;
 import com.tanre.document_register.repository.DocumentTransactionRepository;
@@ -21,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,16 +28,19 @@ import java.util.stream.Collectors;
 public class DocumentService {
     private final DocumentRepository docRepo;
     private final DocumentFileRepository fileRepo;
+    private final BrokerCedantRepository brokerCedantRepository;
     private final DocumentTransactionRepository documentTransactionRepository;
     private final EmailService emailService;
 
     public DocumentService(DocumentRepository docRepo,
+                           BrokerCedantRepository brokerCedantRepository,
                            DocumentFileRepository fileRepo,
                            EmailService emailService,  DocumentTransactionRepository documentTransactionRepository) {
         this.docRepo = docRepo;
         this.fileRepo = fileRepo;
         this.emailService = emailService;
         this.documentTransactionRepository = documentTransactionRepository;
+        this.brokerCedantRepository = brokerCedantRepository;
     }
 
     @Transactional
@@ -71,10 +74,31 @@ public class DocumentService {
         return saved;
     }
 
-    public List<Document> search(String cedantName, String documentType) {
-        return docRepo.findByCedantNameContainingIgnoreCaseAndDocumentTypeContainingIgnoreCase(
+    public List<DocumentDTO> search(String cedantName, String documentType) {
+
+
+        List<Document> documents = docRepo.findByCedantNameContainingIgnoreCaseAndDocumentTypeContainingIgnoreCase(
                 cedantName == null ? "" : cedantName,
                 documentType == null ? "" : documentType);
+
+        List<DocumentDTO> documentDTOS = new ArrayList<>();;
+
+        for (Document doc : documents) {
+            DocumentDTO dto = new DocumentDTO();
+
+            dto.setId(doc.getId());
+            dto.setCedantName(brokerCedantRepository.findNameByCode(doc.getCedantName()));
+            dto.setDocumentType(doc.getDocumentType());
+            dto.setFileName(doc.getFileName());
+            dto.setCreatedBy(doc.getCreatedBy());
+            dto.setStatus(doc.getStatus());
+            dto.setDateCreated(doc.getDateCreated());
+            dto.setDateUpdated(doc.getDateUpdated());
+
+            documentDTOS.add(dto);
+        }
+
+        return documentDTOS;
     }
 
     public DocumentDetailsDTO getDocumentDetails(Long documentId) {

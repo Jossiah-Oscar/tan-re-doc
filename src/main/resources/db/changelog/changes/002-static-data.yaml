@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20250803-001
+      author: jkibona
+      changes:
+        # 2.1 business_class entries
+        - insert:
+            tableName: business_class
+            columns:
+              - column: { name: name, value: "Fire" }
+        - insert:
+            tableName: business_class
+            columns:
+              - column: { name: name, value: "Engineering-CAR" }
+        - insert:
+            tableName: business_class
+            columns:
+              - column: { name: name, value: "Engineering-PAR" }
+        - insert:
+            tableName: business_class
+            columns:
+              - column: { name: name, value: "Engineering-MBD" }
+        - insert:
+            tableName: business_class
+            columns:
+              - column: { name: name, value: "Accident" }
+        - insert:
+            tableName: business_class
+            columns:
+              - column: { name: name, value: "Marine Cargo" }
+        - insert:
+            tableName: business_class
+            columns:
+              - column: { name: name, value: "Marine Hull" }
+        - insert:
+            tableName: business_class
+            columns:
+              - column: { name: name, value: "Motor" }
+        # 2.2 contract_type entries
+        - insert:
+            tableName: contract_type
+            columns:
+              - column: { name: name, value: "First Surplus" }
+        - insert:
+            tableName: contract_type
+            columns:
+              - column: { name: name, value: "Second Surplus" }
+        - insert:
+            tableName: contract_type
+            columns:
+              - column: { name: name, value: "Facultative" }
+        # 2.3 currency entries
+        - insert:
+            tableName: currency
+            columns:
+              - column: { name: code, value: "TZS" }
+              - column: { name: name, value: "Tanzanian Shilling" }
+              - column: { name: exchange_rate, valueNumeric: 1.0 }
+        - insert:
+            tableName: currency
+            columns:
+              - column: { name: code, value: "USD" }
+              - column: { name: name, value: "US Dollar" }
+              - column: { name: exchange_rate, valueNumeric: 2350.0 }

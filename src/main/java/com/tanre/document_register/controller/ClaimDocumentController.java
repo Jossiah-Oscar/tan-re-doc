@@ -4,8 +4,8 @@ import com.tanre.document_register.dto.*;
 import com.tanre.document_register.model.ClaimDocumentFile;
 import com.tanre.document_register.model.ClaimDocumentFinanceStatus;
 import com.tanre.document_register.model.ClaimDocuments;
-import com.tanre.document_register.model.DocumentFile;
 import com.tanre.document_register.repository.ClaimDocumentFileRepository;
+import com.tanre.document_register.repository.ClaimDocumentRepository;
 import com.tanre.document_register.service.ClaimDocumentService;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -31,10 +33,14 @@ public class ClaimDocumentController {
 
     private final ClaimDocumentService claimDocumentService;
     private final ClaimDocumentFileRepository  claimDocumentFileRepository;
+    private final ClaimDocumentRepository claimDocumentRepository;
 
-    public ClaimDocumentController(ClaimDocumentService claimDocumentService, ClaimDocumentFileRepository claimDocumentFileRepository) {
+    private static final Logger logger = LoggerFactory.getLogger(ClaimDocumentController.class);
+
+    public ClaimDocumentController(ClaimDocumentRepository claimDocumentRepository,ClaimDocumentService claimDocumentService, ClaimDocumentFileRepository claimDocumentFileRepository) {
         this.claimDocumentService = claimDocumentService;
         this.claimDocumentFileRepository = claimDocumentFileRepository;
+        this.claimDocumentRepository = claimDocumentRepository;
     }
 
 
@@ -146,6 +152,39 @@ public class ClaimDocumentController {
             @PathVariable Long docId
     ){
         return claimDocumentService.getAllClaimDocFiles(docId);
+    }
+
+    @GetMapping("/refresh-statuses")
+    public ResponseEntity<String> refreshDocumentStatuses() {
+        try {
+            // Get all pending allocation documents
+            List<ClaimDocuments> claimDocuments = claimDocumentRepository
+                    .findByStatus_Id(4L);
+
+            List<ClaimDocumentUpdateRequest> pendingDocuments = claimDocuments.stream()
+                    .map(doc -> new ClaimDocumentUpdateRequest(
+                            doc.getContractNumber(),
+                            doc.getClaimNumber(),
+                            doc.getUnderwritingYear(),
+                            doc.getId()
+                    ))
+                    .collect(Collectors.toList());
+
+            if (!pendingDocuments.isEmpty()) {
+                claimDocumentService.updateDocumentStatusesBatch(pendingDocuments);
+            }
+
+            if (pendingDocuments.isEmpty()) {
+                return ResponseEntity.ok("Couldn't update all docs successfully");
+            }
+
+            return ResponseEntity.ok("Document statuses updated successfully");
+
+        } catch (Exception e) {
+            logger.error("Error refreshing document statuses", e);
+            return ResponseEntity.status(500)
+                    .body("Failed to refresh document statuses: " + e.getMessage());
+        }
     }
 
 }

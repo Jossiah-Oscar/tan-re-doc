@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -66,10 +67,7 @@ public class DocumentController {
             @RequestParam(required = false) String cedantName,
             @RequestParam(required = false) String documentType
     ) {
-        return docService.search(cedantName, documentType)
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return new ArrayList<>(docService.search(cedantName, documentType));
     }
 
     private DocumentDTO toDto(Document doc) {
