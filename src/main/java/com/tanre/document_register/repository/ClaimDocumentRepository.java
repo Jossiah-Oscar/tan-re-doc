@@ -6,6 +6,8 @@ import com.tanre.document_register.model.ClaimDocumentStatus;
 import com.tanre.document_register.model.ClaimDocuments;
 import com.tanre.document_register.model.Document;
 import com.tanre.document_register.model.DocumentFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -27,9 +29,27 @@ public interface ClaimDocumentRepository extends JpaRepository<ClaimDocuments, L
 
     List<ClaimDocuments> findByStatus_IdNot(Long statusId);
 
+    @Query(
+            value = """
+        SELECT c FROM ClaimDocuments c
+        WHERE (:search IS NULL OR :search = '' OR
+               LOWER(c.insured)    LIKE LOWER(CONCAT('%', :search, '%')) OR
+               LOWER(c.claimNumber)    LIKE LOWER(CONCAT('%', :search, '%')))
+      """,
+            countQuery = """
+        SELECT COUNT(c) FROM ClaimDocuments c
+        WHERE (:search IS NULL OR :search = '' OR
+               LOWER(c.insured)    LIKE LOWER(CONCAT('%', :search, '%')) OR
+               LOWER(c.claimNumber)    LIKE LOWER(CONCAT('%', :search, '%')))
+      """
+    )
+    Page<ClaimDocuments> search(@Param("search") String search, Pageable pageable);
+
     @Modifying
     @Query("UPDATE ClaimDocuments d SET d.status = :status WHERE d.id IN :documentIds")
     void updateStatusBatch(@Param("documentIds") List<Long> documentIds,
                            @Param("status") ClaimDocumentStatus status);
+
+
 
 }

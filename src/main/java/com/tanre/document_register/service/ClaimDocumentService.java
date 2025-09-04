@@ -117,7 +117,7 @@ public class ClaimDocumentService {
         for (ClaimDocuments claimDocument : claimDocuments) {
             ClaimDocTransaction claimDocTransaction = getLatestStatus(claimDocument.getId());
             if (claimDocTransaction == null) {
-                continue; // or handle as needed
+                continue;
             }
 
 
@@ -321,6 +321,17 @@ public class ClaimDocumentService {
 
                 claimDocumentRepository.updateStatusBatch(documentsToComplete, newStatus);
             }
+
+
+//            ClaimDocTransaction claimDocTransaction = new ClaimDocTransaction();
+//            claimDocTransaction.setDocument(doc);
+//            claimDocTransaction.setFromFinanceStatus(oldStatus);
+//            claimDocTransaction.setToFinanceStatus(newStatus);
+//            claimDocTransaction.setFromStatus(oldMainStatus);
+//            claimDocTransaction.setToStatus(newMainStatus);
+//            claimDocTransaction.setComment(comment);
+//            claimDocTransaction.setChangedBy(user);
+//            claimDocTransactionRepo.save(claimDocTransaction);
         } catch (Exception e) {
             throw new RuntimeException("Failed to update document statuses", e);
         }
